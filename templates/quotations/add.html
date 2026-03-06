@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Add Quotation - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-file-text"></i> Create New Quotation</h2>
+        <hr>
+    </div>
+</div>
+
+<form id="quotationForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Customer *</label>
+                        <select class="form-select" id="customer_id" name="customer_id" required>
+                            <option value="">-- Select Customer --</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}">{{ customer.company_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quotation Date *</label>
+                        <input type="date" class="form-control" id="quotation_date" name="quotation_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Validity (Days)</label>
+                        <input type="number" class="form-control" id="validity_days" name="validity_days" value="30">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Quotation Items</h5>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">
+                        <i class="bi bi-plus-circle"></i> Add Item
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="itemsContainer">
+                        <!-- Items will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Terms & Conditions</label>
+                        <textarea class="form-control" id="terms_conditions" name="terms_conditions" rows="3"></textarea>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Quotation</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const paperGrades = {{ paper_grades|map(attribute='id')|list|tojson }};
+const rollGrades = {{ roll_grades|map(attribute='id')|list|tojson }};
+
+let itemCount = 0;
+
+function addItem() {
+    itemCount++;
+    const itemHtml = `
+        <div class="card mb-3 item-card" data-item-id="${itemCount}">
+            <div class="card-body">
+                <h6>Item ${itemCount}</h6>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input item-use-manual-rate" id="manual_${itemCount}">
+                    <label class="form-check-label" for="manual_${itemCount}">Enter Manual Rate (rate per unit only, no quantity in quotation)</label>
+                </div>
+                <div class="item-manual-fields mb-3" style="display:none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Description *</label>
+                            <input type="text" class="form-control item-manual-description" placeholder="e.g. 5-Ply Carton Rate per unit">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Rate per unit (PKR) *</label>
+                            <input type="number" step="0.01" class="form-control item-manual-rate" placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+                <div class="item-calc-fields">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Length *</label>
+                        <input type="number" step="0.01" class="form-control item-length" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Width *</label>
+                        <input type="number" step="0.01" class="form-control item-width" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Height *</label>
+                        <input type="number" step="0.01" class="form-control item-height" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Unit *</label>
+                        <select class="form-select item-unit" required>
+                            <option value="mm">mm</option>
+                            <option value="cm">cm</option>
+                            <option value="inches" selected>inches</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3">
+                        <label class="form-label">Ply *</label>
+                        <select class="form-select item-ply" required>
+                            <option value="3">3-Ply</option>
+                            <option value="5">5-Ply</option>
+                            <option value="7">7-Ply</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Pieces</label>
+                        <select class="form-select item-pcs">
+                            <option value="1">1 Piece</option>
+                            <option value="2">2 Pieces</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Quantity *</label>
+                        <input type="number" class="form-control item-quantity" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Joint Type</label>
+                        <select class="form-select item-joint">
+                            <option value="Glue">Glue</option>
+                            <option value="Pin">Pin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Top Paper</label>
+                        <select class="form-select item-top-paper">
+                            <option value="">-- Select --</option>
+                            {% for paper in paper_grades %}
+                            <option value="{{ paper.id }}">{{ paper.name }} ({{ paper.gsm }}gsm)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Middle Paper</label>
+                        <select class="form-select item-middle-paper">
+                            <option value="">-- Select --</option>
+                            {% for paper in paper_grades %}
+                            <option value="{{ paper.id }}">{{ paper.name }} ({{ paper.gsm }}gsm)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Bottom Paper</label>
+                        <select class="form-select item-bottom-paper">
+                            <option value="">-- Select --</option>
+                            {% for paper in paper_grades %}
+                            <option value="{{ paper.id }}">{{ paper.name }} ({{ paper.gsm }}gsm)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Flute 1 Roll</label>
+                        <select class="form-select item-flute1-roll" required>
+                            <option value="">-- Select --</option>
+                            {% for roll in roll_grades %}
+                            <option value="{{ roll.id }}">{{ roll.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Flute 2 Roll</label>
+                        <select class="form-select item-flute2-roll">
+                            <option value="">-- Select --</option>
+                            {% for roll in roll_grades %}
+                            <option value="{{ roll.id }}">{{ roll.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Flute 3 Roll</label>
+                        <select class="form-select item-flute3-roll">
+                            <option value="">-- Select --</option>
+                            {% for roll in roll_grades %}
+                            <option value="{{ roll.id }}">{{ roll.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3">
+                        <label class="form-label">Printing Cost (PKR)</label>
+                        <input type="number" step="0.01" class="form-control item-printing" value="0">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Labour Cost (PKR)</label>
+                        <input type="number" step="0.01" class="form-control item-labour" value="{{ settings.labour_rate }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cartage (PKR)</label>
+                        <input type="number" step="0.01" class="form-control item-cartage" value="{{ settings.cartage_rate }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Calculated Rate</label>
+                        <input type="text" class="form-control item-rate" readonly>
+                    </div>
+                </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeItem(this)">Remove Item</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', itemHtml);
+    const card = document.querySelector(`.item-card[data-item-id="${itemCount}"]`);
+    card.querySelector('.item-use-manual-rate').addEventListener('change', function() {
+        const manual = card.querySelector('.item-manual-fields');
+        const calc = card.querySelector('.item-calc-fields');
+        const isManual = this.checked;
+        manual.style.display = isManual ? 'block' : 'none';
+        calc.style.display = isManual ? 'none' : 'block';
+        card.querySelectorAll('.item-calc-fields input[required]').forEach(el => el.required = !isManual);
+    });
+}
+
+function removeItem(btn) {
+    btn.closest('.item-card').remove();
+}
+
+document.getElementById('quotationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const items = [];
+    document.querySelectorAll('.item-card').forEach(card => {
+        const useManual = card.querySelector('.item-use-manual-rate').checked;
+        if (useManual) {
+            const desc = (card.querySelector('.item-manual-description').value || '').trim() || 'Rate per unit';
+            const rate = parseFloat(card.querySelector('.item-manual-rate').value);
+            if (isNaN(rate)) {
+                alert('Please enter a valid Rate per unit (PKR) for manual rate item.');
+                throw new Error('Invalid manual rate');
+            }
+            items.push({ use_manual_rate: true, description: desc, manual_rate: rate });
+            return;
+        }
+        const item = {
+            length: parseFloat(card.querySelector('.item-length').value),
+            width: parseFloat(card.querySelector('.item-width').value),
+            height: parseFloat(card.querySelector('.item-height').value),
+            unit: card.querySelector('.item-unit').value,
+            ply: parseInt(card.querySelector('.item-ply').value),
+            pcs: parseInt(card.querySelector('.item-pcs').value),
+            quantity: parseInt(card.querySelector('.item-quantity').value),
+            joint_type: card.querySelector('.item-joint').value,
+            top_paper_id: card.querySelector('.item-top-paper').value ? parseInt(card.querySelector('.item-top-paper').value) : null,
+            middle_paper_id: card.querySelector('.item-middle-paper').value ? parseInt(card.querySelector('.item-middle-paper').value) : null,
+            bottom_paper_id: card.querySelector('.item-bottom-paper').value ? parseInt(card.querySelector('.item-bottom-paper').value) : null,
+            flute1_roll_id: card.querySelector('.item-flute1-roll').value ? parseInt(card.querySelector('.item-flute1-roll').value) : null,
+            flute2_roll_id: card.querySelector('.item-flute2-roll').value ? parseInt(card.querySelector('.item-flute2-roll').value) : null,
+            flute3_roll_id: card.querySelector('.item-flute3-roll').value ? parseInt(card.querySelector('.item-flute3-roll').value) : null,
+            printing_cost: parseFloat(card.querySelector('.item-printing').value) || 0,
+            labour_cost: parseFloat(card.querySelector('.item-labour').value) || 0,
+            cartage_cost: parseFloat(card.querySelector('.item-cartage').value) || 0
+        };
+        items.push(item);
+    });
+    
+    const formData = {
+        customer_id: document.getElementById('customer_id').value,
+        quotation_date: document.getElementById('quotation_date').value,
+        validity_days: parseInt(document.getElementById('validity_days').value) || 30,
+        terms_conditions: document.getElementById('terms_conditions').value,
+        items: items
+    };
+    
+    try {
+        const response = await fetch('/quotations/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('Quotation created successfully!');
+            window.location.href = `/quotations/${result.quotation_id}`;
+        } else {
+            alert('Error: ' + (result.message || 'Failed to create quotation'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+</script>
+{% endblock %}

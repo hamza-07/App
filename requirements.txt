@@ -1,0 +1,16 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.5
+supabase==2.0.3
+pandas==2.2.2  # Latest version for Python 3.14 support
+numpy==1.26.4
+reportlab==4.1.0
+Pillow==10.1.0
+python-dateutil==2.8.2
+qrcode==7.4.2
+requests==2.31.0
+python-dotenv==1.0.0
+Werkzeug==3.0.1
+pydantic==2.6.0
+openpyxl==3.1.2  # For Excel export
+jinja2==3.1.3

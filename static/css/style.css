@@ -1,0 +1,73 @@
+/* Custom Styles for Hamza Enterprises Factory Management System */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+.table {
+    background-color: white;
+}
+
+.btn {
+    border-radius: 4px;
+}
+
+.form-control, .form-select {
+    border-radius: 4px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 10px;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .navbar, .btn, .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* Loading Spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
+
+/* Custom Badge Colors */
+.badge {
+    padding: 0.35em 0.65em;
+}

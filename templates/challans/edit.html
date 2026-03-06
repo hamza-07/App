@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Challan - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-pencil-square"></i> Edit Challan {{ challan.challan_number }}</h2>
+        <hr>
+    </div>
+</div>
+
+<form id="challanForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Challan Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Customer</label>
+                        <input type="text" class="form-control" value="{{ challan.customer.company_name }}" readonly>
+                        <input type="hidden" id="customer_id" value="{{ challan.customer_id }}">
+                    </div>
+                    {% if challan.quotation %}
+                    <div class="mb-3">
+                        <label class="form-label">Linked Quotation</label>
+                        <input type="text" class="form-control" value="{{ challan.quotation.quotation_number }}"
+                            readonly>
+                        <input type="hidden" id="quotation_id" value="{{ challan.quotation_id }}">
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Challan Date *</label>
+                        <input type="date" class="form-control" id="challan_date" name="challan_date"
+                            value="{{ challan.challan_date }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">P.O. Number</label>
+                        <input type="text" class="form-control" id="po_number" name="po_number"
+                            value="{{ challan.po_number or '' }}">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Driver Name</label>
+                            <input type="text" class="form-control" id="driver_name" name="driver_name"
+                                value="{{ challan.driver_name or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Vehicle No</label>
+                            <input type="text" class="form-control" id="vehicle_no" name="vehicle_no"
+                                value="{{ challan.vehicle_no or '' }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Driver Contact</label>
+                        <input type="text" class="form-control" id="driver_contact" name="driver_contact"
+                            value="{{ challan.driver_contact or '' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Delivery Items</h5>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">
+                        <i class="bi bi-plus-circle"></i> Add Item
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="itemsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Challan</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let itemCount = 0;
+    const existingItems = {{ items_json| tojson }};
+
+    function addItem(data = null) {
+        itemCount++;
+        const d = data || {};
+        const val = (key, def = '') => d[key] !== undefined && d[key] !== null ? d[key] : def;
+
+        // Calculate total initially
+        const boxes = parseInt(val('boxes', 0));
+        const bundles = parseInt(val('bundles', 0));
+        const loss = parseInt(val('loss_quantity', 0));
+        const total = (boxes * bundles) + loss;
+
+        const itemHtml = `
+        <div class="card mb-3 item-card" data-item-id="${itemCount}">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="form-label">Description *</label>
+                        <input type="text" class="form-control item-description" value="${val('description', '')}" required>
+                        <input type="hidden" class="item-id" value="${val('id', '')}">
+                        <input type="hidden" class="item-quotation-item-id" value="${val('quotation_item_id', '')}">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Boxes *</label>
+                        <input type="number" class="form-control item-boxes" value="${val('boxes', '')}" required onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Bundles *</label>
+                        <input type="number" class="form-control item-bundles" value="${val('bundles', '')}" required onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Loss</label>
+                        <input type="number" class="form-control item-loss" value="${val('loss_quantity', '0')}" min="0" onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Total</label>
+                        <input type="text" class="form-control item-total" value="${total > 0 ? total : ''}" readonly title="Boxes × Bundles + Loss">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                         <button type="button" class="btn btn-sm btn-danger mb-1" onclick="removeItem(this)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+        document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', itemHtml);
+    }
+
+    function calculateTotal(input) {
+        const card = input.closest('.item-card');
+        const boxes = parseInt(card.querySelector('.item-boxes').value) || 0;
+        const bundles = parseInt(card.querySelector('.item-bundles').value) || 0;
+        const loss = parseInt(card.querySelector('.item-loss').value) || 0;
+        const goodQty = boxes * bundles;
+        card.querySelector('.item-total').value = goodQty + loss;
+    }
+
+    function removeItem(btn) {
+        if (confirm('Remove this item?')) {
+            btn.closest('.item-card').remove();
+        }
+    }
+
+    // Populate existing items
+    if (existingItems && existingItems.length > 0) {
+        existingItems.forEach(item => addItem(item));
+    } else {
+        addItem();
+    }
+
+    document.getElementById('challanForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const items = [];
+        document.querySelectorAll('.item-card').forEach(card => {
+            const boxes = parseInt(card.querySelector('.item-boxes').value);
+            const bundles = parseInt(card.querySelector('.item-bundles').value);
+            const loss = parseInt(card.querySelector('.item-loss').value) || 0;
+
+            items.push({
+                id: card.querySelector('.item-id').value ? parseInt(card.querySelector('.item-id').value) : null,
+                description: card.querySelector('.item-description').value,
+                boxes: boxes,
+                bundles: bundles,
+                loss_quantity: loss,
+                quotation_item_id: card.querySelector('.item-quotation-item-id').value ? parseInt(card.querySelector('.item-quotation-item-id').value) : null
+            });
+        });
+
+        const formData = {
+            challan_date: document.getElementById('challan_date').value,
+            po_number: document.getElementById('po_number').value,
+            driver_name: document.getElementById('driver_name').value,
+            vehicle_no: document.getElementById('vehicle_no').value,
+            driver_contact: document.getElementById('driver_contact').value,
+            items: items
+        };
+
+        try {
+            const response = await fetch('/challans/{{ challan.id }}/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Challan updated successfully!');
+                // Redirect to list or pdf
+                // Standard flow usually views the PDF or list
+                window.location.href = `/challans`;
+            } else {
+                alert('Error: ' + (result.message || 'Failed to update challan'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    });
+</script>
+{% endblock %}

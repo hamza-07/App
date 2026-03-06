@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-gear"></i> Settings</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>System Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <h6 class="mt-3">Company Information</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Company Name</label>
+                        <input type="text" class="form-control" name="company_name" value="{{ settings.company_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Company Address</label>
+                        <textarea class="form-control" name="company_address" rows="2">{{ settings.company_address or '' }}</textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Company Phone</label>
+                            <input type="text" class="form-control" name="company_phone" value="{{ settings.company_phone or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Company STN</label>
+                            <input type="text" class="form-control" name="company_strn" value="{{ settings.company_strn or '' }}">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Company NTN</label>
+                            <input type="text" class="form-control" name="company_ntn" value="{{ settings.company_ntn or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Company Email (FBR)</label>
+                            <input type="email" class="form-control" name="company_email" value="{{ settings.company_email|default('', true) }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Business Type (FBR)</label>
+                        <select class="form-select" name="business_type">
+                            <option value="Manufacturer" {{ 'selected' if (settings.business_type|default('', true) or '') == 'Manufacturer' else '' }}>Manufacturer</option>
+                            <option value="Wholesaler" {{ 'selected' if (settings.business_type|default('', true) or '') == 'Wholesaler' else '' }}>Wholesaler</option>
+                            <option value="Retailer" {{ 'selected' if (settings.business_type|default('', true) or '') == 'Retailer' else '' }}>Retailer</option>
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    <h6 class="mt-3">FBR Digital Invoicing Configuration</h6>
+                    <div class="alert alert-info">
+                        <small>Configure your unique FBR credentials (POS ID & Auth Token) here. Each user/company needs their own.</small>
+                    </div>
+                    <div class="row mb-3">
+                         <div class="col-md-6">
+                            <label class="form-label">POS ID</label>
+                            <input type="text" class="form-control" name="fbr_pos_id" value="{{ settings.fbr_pos_id or '' }}" placeholder="Enter POS ID">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Auth Token</label>
+                            <input type="text" class="form-control" name="fbr_auth_token" value="{{ settings.fbr_auth_token or '' }}" placeholder="Enter Bearer Token">
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mt-3">Default Terms & Conditions</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Project Duration</label>
+                            <input type="text" class="form-control" name="terms_duration" value="{{ settings.terms_duration or 'As per scope of work' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Validity</label>
+                            <input type="text" class="form-control" name="terms_validity" value="{{ settings.terms_validity or '30 days from quotation date' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Payment Terms</label>
+                            <input type="text" class="form-control" name="terms_payment" value="{{ settings.terms_payment or '50% advance, 50% upon completion' }}">
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mt-3">Branding & Images</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Header Image</label>
+                            {% if settings.header_image %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename='uploads/' + settings.header_image) }}" alt="Header" style="max-height: 50px;">
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" name="header_image">
+                            <small class="text-muted">Click to upload header image</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Footer Image</label>
+                             {% if settings.footer_image %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename='uploads/' + settings.footer_image) }}" alt="Footer" style="max-height: 50px;">
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" name="footer_image">
+                            <small class="text-muted">Click to upload footer image</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Upload Signature</label>
+                             {% if settings.signature_image %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename='uploads/' + settings.signature_image) }}" alt="Signature" style="max-height: 50px;">
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" name="signature_image">
+                            <small class="text-muted">Signature Name (e.g., CEO Signature)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Upload Stamp</label>
+                             {% if settings.stamp_image %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename='uploads/' + settings.stamp_image) }}" alt="Stamp" style="max-height: 50px;">
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" name="stamp_image">
+                            <small class="text-muted">Stamp Name (e.g., Company Seal)</small>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6 class="mt-3">Google Drive Integration</h6>
+                    <div class="mb-3">
+                        <p>Status: 
+                            {% if settings.google_drive_connected %}
+                                <span class="badge bg-success">Connected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Connected</span>
+                            {% endif %}
+                        </p>
+                        <button type="button" class="btn btn-outline-primary"><i class="bi bi-google"></i> Connect Google Drive</button>
+                    </div>
+
+                    <hr>
+                    <h6 class="mt-3">Default Rates</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Silicate Rate (per sq inch)</label>
+                            <input type="number" step="0.0001" class="form-control" name="silicate_rate" value="{{ settings.silicate_rate }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Labour Rate (PKR)</label>
+                            <input type="number" step="0.01" class="form-control" name="labour_rate" value="{{ settings.labour_rate }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Cartage Rate (PKR)</label>
+                            <input type="number" step="0.01" class="form-control" name="cartage_rate" value="{{ settings.cartage_rate }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Profit Margin (%)</label>
+                            <input type="number" step="0.01" class="form-control" name="profit_margin_percent" value="{{ settings.profit_margin_percent }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Wastage (%)</label>
+                            <input type="number" step="0.01" class="form-control" name="wastage_percent" value="{{ settings.wastage_percent }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Flute Factor</label>
+                            <input type="number" step="0.01" class="form-control" name="flute_factor" value="{{ settings.flute_factor }}">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Paper Grades -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Paper Grades</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>GSM</th>
+                            <th>Rate (PKR/kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for paper in paper_grades %}
+                        <tr>
+                            <td>{{ paper.name }}</td>
+                            <td>{{ paper.gsm }}</td>
+                            <td>{{ paper.rate_per_kg }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button class="btn btn-sm btn-primary" onclick="addPaperGrade()">Add Paper Grade</button>
+            </div>
+        </div>
+        
+        <!-- Roll Grades -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Roll Grades</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Rate (PKR/roll)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for roll in roll_grades %}
+                        <tr>
+                            <td>{{ roll.name }}</td>
+                            <td>{{ roll.rate_per_roll }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button class="btn btn-sm btn-primary" onclick="addRollGrade()">Add Roll Grade</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addPaperGrade() {
+    const name = prompt('Paper Name (e.g., Kraft 125g):');
+    const gsm = prompt('GSM:');
+    const rate = prompt('Rate per kg (PKR):');
+    
+    if (name && gsm && rate) {
+        fetch('/settings/paper/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, gsm: parseFloat(gsm), rate_per_kg: parseFloat(rate)})
+        }).then(() => location.reload());
+    }
+}
+
+function addRollGrade() {
+    const name = prompt('Roll Name:');
+    const rate = prompt('Rate per roll (PKR):');
+    
+    if (name && rate) {
+        fetch('/settings/roll/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, rate_per_roll: parseFloat(rate)})
+        }).then(() => location.reload());
+    }
+}
+</script>
+{% endblock %}

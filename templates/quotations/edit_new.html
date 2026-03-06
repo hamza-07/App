@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Quotation - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-pencil-square"></i> Edit Quotation {{ quotation.quotation_number }}</h2>
+        <hr>
+    </div>
+</div>
+
+<form id="quotationForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Customer *</label>
+                        <select class="form-select" id="customer_id" name="customer_id" required>
+                            <option value="">-- Select Customer --</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}" {% if customer.id==quotation.customer_id %}selected{% endif %}>{{ customer.company_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quotation Date *</label>
+                        <input type="date" class="form-control" id="quotation_date" name="quotation_date" value="{{ quotation.quotation_date }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Validity (Days)</label>
+                        <input type="number" class="form-control" id="validity_days" name="validity_days" value="{{ quotation.validity_days }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Quotation Items</h5>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">
+                        <i class="bi bi-plus-circle"></i> Add Item
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="itemsContainer">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Terms & Conditions</label>
+                        <textarea class="form-control" id="terms_conditions" name="terms_conditions" rows="3">{{ quotation.terms_conditions }}</textarea>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Quotation</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script type="application/json" id="paperGradesData">{{ paper_grades|tojson|safe }}</script>
+<script type="application/json" id="rollGradesData">{{ roll_grades|tojson|safe }}</script>
+<script type="application/json" id="existingItemsData">{{ items_json|tojson|safe }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var paperGrades = JSON.parse(document.getElementById('paperGradesData').textContent);
+var rollGrades = JSON.parse(document.getElementById('rollGradesData').textContent);
+var existingItems = JSON.parse(document.getElementById('existingItemsData').textContent);
+var labourRate = {{ settings.labour_rate }};
+var cartageRate = {{ settings.cartage_rate }};
+
+var itemCount = 0;
+
+function addItem(data) {
+    itemCount++;
+    data = data || {};
+    
+    var topOptions = '<option value="">-- Select --</option>';
+    var midOptions = '<option value="">-- Select --</option>';
+    var botOptions = '<option value="">-- Select --</option>';
+    
+    for(var i=0; i<paperGrades.length; i++) {
+        var p = paperGrades[i];
+        topOptions += '<option value="' + p.id + '">' + p.name + ' (' + p.gsm + 'gsm)</option>';
+        midOptions += '<option value="' + p.id + '">' + p.name + ' (' + p.gsm + 'gsm)</option>';
+        botOptions += '<option value="' + p.id + '">' + p.name + ' (' + p.gsm + 'gsm)</option>';
+    }
+    
+    var flute1Opts = '<option value="">-- Select --</option>';
+    var flute2Opts = '<option value="">-- Select --</option>';
+    var flute3Opts = '<option value="">-- Select --</option>';
+    
+    for(var i=0; i<rollGrades.length; i++) {
+        var r = rollGrades[i];
+        flute1Opts += '<option value="' + r.id + '">' + r.name + '</option>';
+        flute2Opts += '<option value="' + r.id + '">' + r.name + '</option>';
+        flute3Opts += '<option value="' + r.id + '">' + r.name + '</option>';
+    }
+    
+    var useManual = data.use_manual_rate || false;
+    var html = '<div class="card mb-3 item-card" id="item-' + itemCount + '">' +
+        '<div class="card-body">' +
+        '<div class="d-flex justify-content-between"><h6>Item ' + itemCount + '</h6>' +
+        '<button type="button" class="btn btn-sm btn-danger" onclick="removeItem(' + itemCount + ')">Remove</button></div>' +
+        '<input type="hidden" class="item-id" value="' + (data.id || '') + '">' +
+        '<div class="mb-3 form-check">' +
+        '<input type="checkbox" class="form-check-input use-manual" id="manual-' + itemCount + '" ' + (useManual ? 'checked' : '') + '>' +
+        '<label class="form-check-label" for="manual-' + itemCount + '">Manual Rate</label></div>' +
+        '<div class="manual-fields" style="display:' + (useManual ? 'block' : 'none') + ';">' +
+        '<div class="row"><div class="col-md-6"><label>Description</label><input type="text" class="form-control manual-desc" value="' + (data.description || '') + '"></div>' +
+        '<div class="col-md-4"><label>Rate</label><input type="number" step="0.01" class="form-control manual-rate" value="' + (data.manual_rate || '') + '"></div></div></div>' +
+        '<div class="calc-fields" style="display:' + (useManual ? 'none' : 'block') + ';">' +
+        '<div class="row">' +
+        '<div class="col-md-3"><label>Length</label><input type="number" step="0.01" class="form-control item-length" value="' + (data.length || '') + '"></div>' +
+        '<div class="col-md-3"><label>Width</label><input type="number" step="0.01" class="form-control item-width" value="' + (data.width || '') + '"></div>' +
+        '<div class="col-md-3"><label>Height</label><input type="number" step="0.01" class="form-control item-height" value="' + (data.height || '') + '"></div>' +
+        '<div class="col-md-3"><label>Unit</label><select class="form-control item-unit"><option value="mm">mm</option><option value="cm">cm</option><option value="inches">inches</option></select></div></div>' +
+        '<div class="row mt-2">' +
+        '<div class="col-md-3"><label>Ply</label><select class="form-control item-ply"><option value="3">3-Ply</option><option value="5">5-Ply</option><option value="7">7-Ply</option></select></div>' +
+        '<div class="col-md-3"><label>Quantity</label><input type="number" class="form-control item-qty" value="' + (data.quantity || '') + '"></div>' +
+        '<div class="col-md-3"><label>Joint</label><select class="form-control item-joint"><option value="Glue">Glue</option><option value="Pin">Pin</option></select></div></div>' +
+        '<div class="row mt-2">' +
+        '<div class="col-md-4"><label>Top Paper</label><select class="form-control item-top">' + topOptions + '</select></div>' +
+        '<div class="col-md-4"><label>Middle Paper</label><select class="form-control item-mid">' + midOptions + '</select></div>' +
+        '<div class="col-md-4"><label>Bottom Paper</label><select class="form-control item-bot">' + botOptions + '</select></div></div>' +
+        '<div class="row mt-2">' +
+        '<div class="col-md-4"><label>Flute 1</label><select class="form-control item-f1">' + flute1Opts + '</select></div>' +
+        '<div class="col-md-4"><label>Flute 2</label><select class="form-control item-f2">' + flute2Opts + '</select></div>' +
+        '<div class="col-md-4"><label>Flute 3</label><select class="form-control item-f3">' + flute3Opts + '</select></div></div>' +
+        '<div class="row mt-2">' +
+        '<div class="col-md-4"><label>Printing</label><input type="number" step="0.01" class="form-control item-print" value="' + (data.printing_cost || 0) + '"></div>' +
+        '<div class="col-md-4"><label>Labour</label><input type="number" step="0.01" class="form-control item-labour" value="' + labourRate + '"></div>' +
+        '<div class="col-md-4"><label>Cartage</label><input type="number" step="0.01" class="form-control item-cartage" value="' + cartageRate + '"></div></div>' +
+        '</div></div></div>';
+    
+    document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', html);
+    
+    var card = document.getElementById('item-' + itemCount);
+    var checkbox = card.querySelector('.use-manual');
+    var manualFields = card.querySelector('.manual-fields');
+    var calcFields = card.querySelector('.calc-fields');
+    
+    checkbox.addEventListener('change', function() {
+        manualFields.style.display = this.checked ? 'block' : 'none';
+        calcFields.style.display = this.checked ? 'none' : 'block';
+    });
+    
+    // Set values
+    if(data.unit) card.querySelector('.item-unit').value = data.unit;
+    if(data.ply) card.querySelector('.item-ply').value = data.ply;
+    if(data.joint_type) card.querySelector('.item-joint').value = data.joint_type;
+    if(data.top_paper_id) card.querySelector('.item-top').value = data.top_paper_id;
+    if(data.middle_paper_id) card.querySelector('.item-mid').value = data.middle_paper_id;
+    if(data.bottom_paper_id) card.querySelector('.item-bot').value = data.bottom_paper_id;
+    if(data.flute1_roll_id) card.querySelector('.item-f1').value = data.flute1_roll_id;
+    if(data.flute2_roll_id) card.querySelector('.item-f2').value = data.flute2_roll_id;
+    if(data.flute3_roll_id) card.querySelector('.item-f3').value = data.flute3_roll_id;
+}
+
+function removeItem(id) {
+    if(confirm('Remove this item?')) {
+        document.getElementById('item-' + id).remove();
+    }
+}
+
+// Load existing items
+if(existingItems && existingItems.length > 0) {
+    for(var i=0; i<existingItems.length; i++) {
+        addItem(existingItems[i]);
+    }
+} else {
+    addItem({});
+}
+
+document.getElementById('quotationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    var items = [];
+    var cards = document.querySelectorAll('.item-card');
+    var hasError = false;
+    
+    for(var i=0; i<cards.length; i++) {
+        var card = cards[i];
+        var useManual = card.querySelector('.use-manual').checked;
+        
+        if(useManual) {
+            var desc = card.querySelector('.manual-desc').value || 'Rate per unit';
+            var rate = parseFloat(card.querySelector('.manual-rate').value);
+            if(isNaN(rate)) { alert('Enter rate'); hasError = true; break; }
+            items.push({
+                id: card.querySelector('.item-id').value ? parseInt(card.querySelector('.item-id').value) : null,
+                use_manual_rate: true,
+                description: desc,
+                manual_rate: rate
+            });
+        } else {
+            var qty = parseInt(card.querySelector('.item-qty').value);
+            if(isNaN(qty) || qty <= 0) { alert('Enter quantity'); hasError = true; break; }
+            items.push({
+                id: card.querySelector('.item-id').value ? parseInt(card.querySelector('.item-id').value) : null,
+                length: parseFloat(card.querySelector('.item-length').value) || 0,
+                width: parseFloat(card.querySelector('.item-width').value) || 0,
+                height: parseFloat(card.querySelector('.item-height').value) || 0,
+                unit: card.querySelector('.item-unit').value,
+                ply: parseInt(card.querySelector('.item-ply').value),
+                pcs: 1,
+                quantity: qty,
+                joint_type: card.querySelector('.item-joint').value,
+                top_paper_id: card.querySelector('.item-top').value ? parseInt(card.querySelector('.item-top').value) : null,
+                middle_paper_id: card.querySelector('.item-mid').value ? parseInt(card.querySelector('.item-mid').value) : null,
+                bottom_paper_id: card.querySelector('.item-bot').value ? parseInt(card.querySelector('.item-bot').value) : null,
+                flute1_roll_id: card.querySelector('.item-f1').value ? parseInt(card.querySelector('.item-f1').value) : null,
+                flute2_roll_id: card.querySelector('.item-f2').value ? parseInt(card.querySelector('.item-f2').value) : null,
+                flute3_roll_id: card.querySelector('.item-f3').value ? parseInt(card.querySelector('.item-f3').value) : null,
+                printing_cost: parseFloat(card.querySelector('.item-print').value) || 0,
+                labour_cost: parseFloat(card.querySelector('.item-labour').value) || 0,
+                cartage_cost: parseFloat(card.querySelector('.item-cartage').value) || 0
+            });
+        }
+    }
+    
+    if(hasError) return;
+    
+    var formData = {
+        customer_id: document.getElementById('customer_id').value,
+        quotation_date: document.getElementById('quotation_date').value,
+        validity_days: parseInt(document.getElementById('validity_days').value) || 30,
+        terms_conditions: document.getElementById('terms_conditions').value,
+        items: items
+    };
+    
+    fetch('/quotations/{{ quotation.id }}/edit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(formData)
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(result) {
+        if(result.success) {
+            alert('Updated!');
+            window.location.href = '/quotations/' + result.quotation_id;
+        } else {
+            alert('Error: ' + (result.message || 'Failed'));
+        }
+    })
+    .catch(function(err) {
+        alert('Error: ' + err.message);
+    });
+});
+</script>
+{% endblock %}

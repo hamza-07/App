@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Add Invoice - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-receipt"></i> Create Sales Tax Invoice</h2>
+        <hr>
+    </div>
+</div>
+
+<form id="invoiceForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Invoice Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Customer *</label>
+                        <select class="form-select" id="customer_id" name="customer_id" required>
+                            <option value="">-- Select Customer --</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}">{{ customer.company_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Invoice Date *</label>
+                        <input type="date" class="form-control" id="invoice_date" name="invoice_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">H.S. Code</label>
+                        <input type="text" class="form-control" id="hs_code" name="hs_code" value="4819.1000">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Invoice Type (FBR)</label>
+                            <select class="form-select" id="invoice_type">
+                                <option value="Tax Invoice">Tax Invoice</option>
+                                <option value="Retail Invoice">Retail Invoice</option>
+                                <option value="Export Invoice">Export Invoice</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Mode</label>
+                            <select class="form-select" id="payment_mode">
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer" selected>Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Credit">Credit</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bank Name (optional)</label>
+                        <input type="text" class="form-control" id="payment_bank_name" placeholder="e.g. Allied Bank Limited">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Account / Transaction ID (optional)</label>
+                            <input type="text" class="form-control" id="payment_transaction_id">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Due Date (optional)</label>
+                            <input type="date" class="form-control" id="payment_due_date">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Select Challans</h5>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="loadChallans()">Load Challans</button>
+                </div>
+                <div class="card-body">
+                    <div id="challansContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Invoice Items</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantity</th>
+                                <th>Unit Rate (PKR)</th>
+                                <th>Amount (PKR)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                            <!-- Items will be added here -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Gross Total:</strong></td>
+                                <td><strong id="grossTotal">0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Sales Tax (18%):</strong></td>
+                                <td><strong id="salesTax">0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Less Discount:</strong></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm" id="discount_amount" value="0" onchange="calculateTotals()" style="max-width:120px;display:inline-block;"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                <td><strong id="totalAmount">0.00</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Invoice</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let invoiceItems = [];
+
+function loadChallans() {
+    const customerId = document.getElementById('customer_id').value;
+    if (!customerId) {
+        alert('Please select a customer first');
+        return;
+    }
+    
+    fetch(`/api/challans/uninvoiced?customer_id=${customerId}`)
+        .then(response => response.json())
+        .then(challans => {
+            const container = document.getElementById('challansContainer');
+            container.innerHTML = '';
+            
+            challans.forEach(challan => {
+                const challanHtml = `
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <h6>${challan.challan_number} - ${challan.date}</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="${challan.id}" id="challan_${challan.id}" onchange="loadChallanItems(${challan.id}, this.checked)">
+                                <label class="form-check-label" for="challan_${challan.id}">
+                                    Select this challan
+                                </label>
+                            </div>
+                            <div id="challan_items_${challan.id}" style="display:none; margin-left:20px; margin-top:10px;">
+                                <!-- Items will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', challanHtml);
+            });
+        });
+}
+
+function loadChallanItems(challanId, checked) {
+    const container = document.getElementById(`challan_items_${challanId}`);
+    if (!checked) {
+        container.style.display = 'none';
+        // Remove items from invoice
+        invoiceItems = invoiceItems.filter(item => item.challan_id != challanId);
+        updateItemsTable();
+        return;
+    }
+    
+    fetch(`/api/challans/uninvoiced?customer_id=${document.getElementById('customer_id').value}`)
+        .then(response => response.json())
+        .then(challans => {
+            const challan = challans.find(c => c.id == challanId);
+            if (challan) {
+                container.innerHTML = '';
+                challan.items.forEach(item => {
+                    const itemHtml = `
+                        <div class="mb-2">
+                            <input type="checkbox" class="form-check-input" value="${item.id}" 
+                                   onchange="toggleInvoiceItem(${challanId}, ${item.id}, '${item.description}', ${item.total_quantity}, this.checked)">
+                            <label>${item.description} - Qty: ${item.total_quantity}</label>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', itemHtml);
+                });
+                container.style.display = 'block';
+            }
+        });
+}
+
+function toggleInvoiceItem(challanId, challanItemId, description, quantity, checked) {
+    if (checked) {
+        invoiceItems.push({
+            challan_id: challanId,
+            challan_item_id: challanItemId,
+            description: description,
+            quantity: quantity,
+            unit_rate: 0,
+            amount: 0
+        });
+    } else {
+        invoiceItems = invoiceItems.filter(item => item.challan_item_id != challanItemId);
+    }
+    updateItemsTable();
+}
+
+function updateItemsTable() {
+    const tbody = document.getElementById('itemsTableBody');
+    tbody.innerHTML = '';
+    
+    invoiceItems.forEach((item, index) => {
+        const row = `
+            <tr>
+                <td>${item.description}</td>
+                <td>${item.quantity}</td>
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm" 
+                           value="${item.unit_rate}" 
+                           onchange="updateItemRate(${index}, this.value)">
+                </td>
+                <td>${item.amount.toFixed(2)}</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+    });
+    
+    calculateTotals();
+}
+
+function updateItemRate(index, rate) {
+    invoiceItems[index].unit_rate = parseFloat(rate);
+    invoiceItems[index].amount = invoiceItems[index].quantity * invoiceItems[index].unit_rate;
+    updateItemsTable();
+}
+
+function calculateTotals() {
+    const grossTotal = invoiceItems.reduce((sum, item) => sum + item.amount, 0);
+    const salesTax = grossTotal * 0.18;
+    const discount = parseFloat(document.getElementById('discount_amount')?.value || 0) || 0;
+    const total = grossTotal + salesTax - discount;
+    
+    document.getElementById('grossTotal').textContent = grossTotal.toFixed(2);
+    document.getElementById('salesTax').textContent = salesTax.toFixed(2);
+    document.getElementById('totalAmount').textContent = total.toFixed(2);
+}
+
+function getNowTime() {
+    const d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + 
+           d.getMinutes().toString().padStart(2,'0') + ':' + 
+           d.getSeconds().toString().padStart(2,'0');
+}
+
+document.getElementById('invoiceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const grossTotal = invoiceItems.reduce((sum, item) => sum + item.amount, 0);
+    const salesTax = grossTotal * 0.18;
+    const discountAmount = parseFloat(document.getElementById('discount_amount')?.value || 0) || 0;
+    const total = grossTotal + salesTax - discountAmount;
+    
+    const formData = {
+        customer_id: document.getElementById('customer_id').value,
+        invoice_date: document.getElementById('invoice_date').value,
+        invoice_time: getNowTime(),
+        invoice_type: document.getElementById('invoice_type').value,
+        payment_mode: document.getElementById('payment_mode').value,
+        payment_bank_name: document.getElementById('payment_bank_name').value || '',
+        payment_transaction_id: document.getElementById('payment_transaction_id').value || '',
+        payment_due_date: document.getElementById('payment_due_date').value || '',
+        discount_amount: discountAmount,
+        hs_code: document.getElementById('hs_code').value,
+        gross_total: grossTotal,
+        sales_tax_percent: 18,
+        sales_tax_amount: salesTax,
+        total_amount: total,
+        items: invoiceItems
+    };
+    
+    try {
+        const response = await fetch('/invoices/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('Invoice created successfully!');
+            window.location.href = `/invoices/${result.invoice_id}/pdf`;
+        } else {
+            alert('Error: ' + (result.message || 'Failed to create invoice'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+</script>
+{% endblock %}

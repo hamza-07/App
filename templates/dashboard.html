@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- Sales Overview -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Today's Quotations</h5>
+                <h2>{{ today_quotations }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Today's Challans</h5>
+                <h2>{{ today_challans }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Today's Invoices</h5>
+                <h2>{{ today_invoices }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">This Week</h5>
+                <p>Quotations: {{ week_quotations }} | Challans: {{ week_challans }} | Invoices: {{ week_invoices }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">This Month</h5>
+                <p>Quotations: {{ month_quotations }} | Challans: {{ month_challans }} | Invoices: {{ month_invoices }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Deliveries -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history"></i> Pending Deliveries</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Quotation No</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Total Qty</th>
+                            <th>Delivered</th>
+                            <th>Pending</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for quotation in pending_quotations %}
+                        <tr>
+                            <td>{{ quotation.quotation_number }}</td>
+                            <td>{{ quotation.customer.company_name }}</td>
+                            <td>{{ quotation.quotation_date.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ quotation.get_total_quantity() }}</td>
+                            <td>{{ quotation.get_delivered_quantity() }}</td>
+                            <td>{{ quotation.get_pending_quantity() }}</td>
+                            <td><span class="badge bg-warning">{{ quotation.status }}</span></td>
+                            <td>
+                                <a href="{{ url_for('add_challan') }}?quotation_id={{ quotation.id }}" class="btn btn-sm btn-primary">
+                                    Create Challan
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center">No pending deliveries</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Balances -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-currency-dollar"></i> Top 10 Pending Balances</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Invoice No</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Total Amount</th>
+                            <th>Paid</th>
+                            <th>Outstanding</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice, customer in invoices_with_balance %}
+                        <tr>
+                            <td>{{ invoice.invoice_number }}</td>
+                            <td>{{ customer.company_name }}</td>
+                            <td>{{ invoice.invoice_date.strftime('%d-%m-%Y') }}</td>
+                            <td>PKR {{ "%.2f"|format(invoice.total_amount) }}</td>
+                            <td>
+                                {% set paid = invoice.payments|sum(attribute='amount') if invoice.payments else 0 %}
+                                PKR {{ "%.2f"|format(paid) }}
+                            </td>
+                            <td><strong>PKR {{ "%.2f"|format(invoice.total_amount - paid) }}</strong></td>
+                            <td>
+                                <a href="{{ url_for('add_payment') }}?invoice_id={{ invoice.id }}" class="btn btn-sm btn-success">
+                                    Add Payment
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No outstanding balances</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

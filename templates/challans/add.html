@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Add Challan - Hamza Enterprises{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="bi bi-truck"></i> Create Delivery Challan</h2>
+        <hr>
+    </div>
+</div>
+
+<form id="challanForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Challan Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Customer *</label>
+                        <select class="form-select" id="customer_id" name="customer_id" required>
+                            <option value="">-- Select Customer --</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}">{{ customer.company_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Quotation (Optional)</label>
+                        <select class="form-select" id="quotation_id" name="quotation_id">
+                            <option value="">-- No Quotation (Direct Challan) --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Challan Date *</label>
+                        <input type="date" class="form-control" id="challan_date" name="challan_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">P.O. Number</label>
+                        <input type="text" class="form-control" id="po_number" name="po_number">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Driver Name</label>
+                            <input type="text" class="form-control" id="driver_name" name="driver_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Vehicle No</label>
+                            <input type="text" class="form-control" id="vehicle_no" name="vehicle_no">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Driver Contact</label>
+                        <input type="text" class="form-control" id="driver_contact" name="driver_contact">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Delivery Items</h5>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">
+                        <i class="bi bi-plus-circle"></i> Add Item
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="itemsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Challan</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let itemCount = 0;
+
+document.getElementById('customer_id').addEventListener('change', async function() {
+    const customerId = this.value;
+    const quotationSelect = document.getElementById('quotation_id');
+    
+    // Clear existing options except the first one
+    quotationSelect.innerHTML = '<option value="">-- No Quotation (Direct Challan) --</option>';
+    
+    if (!customerId) return;
+    
+    try {
+        const response = await fetch(`/api/customers/${customerId}/quotations`);
+        const quotations = await response.json();
+        
+        quotations.forEach(quotation => {
+            const option = document.createElement('option');
+            option.value = quotation.id;
+            option.textContent = `${quotation.quotation_number} (${quotation.pending_quantity} pending)`;
+            quotationSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading customer quotations:', error);
+    }
+});
+
+document.getElementById('quotation_id').addEventListener('change', async function() {
+    const quotationId = this.value;
+    if (!quotationId) return;
+    
+    try {
+        const response = await fetch(`/api/quotations/${quotationId}/items`);
+        const items = await response.json();
+        
+        document.getElementById('itemsContainer').innerHTML = '';
+        itemCount = 0;
+        
+        items.forEach(item => {
+            addItemFromQuotation(item);
+        });
+        
+        // Auto-select customer
+        const selectedOption = document.querySelector(`#quotation_id option[value="${quotationId}"]`);
+        if (selectedOption) {
+            const customerId = selectedOption.getAttribute('data-customer-id');
+            if (customerId) {
+                document.getElementById('customer_id').value = customerId;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading quotation items:', error);
+    }
+});
+
+function addItem() {
+    itemCount++;
+    const itemHtml = `
+        <div class="card mb-3 item-card" data-item-id="${itemCount}">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="form-label">Description *</label>
+                        <input type="text" class="form-control item-description" required>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Boxes *</label>
+                        <input type="number" class="form-control item-boxes" required onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Bundles *</label>
+                        <input type="number" class="form-control item-bundles" required onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Loss</label>
+                        <input type="number" class="form-control item-loss" value="0" min="0" onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Total</label>
+                        <input type="text" class="form-control item-total" readonly title="Boxes × Bundles + Loss">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeItem(this)">Remove</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', itemHtml);
+}
+
+function addItemFromQuotation(item) {
+    itemCount++;
+    const itemHtml = `
+        <div class="card mb-3 item-card" data-item-id="${itemCount}">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="form-label">Description *</label>
+                        <input type="text" class="form-control item-description" value="${item.description}" required>
+                        <input type="hidden" class="item-quotation-item-id" value="${item.id}">
+                        <small class="text-muted">Pending: ${item.pending} | Delivered: ${item.delivered}</small>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Boxes *</label>
+                        <input type="number" class="form-control item-boxes" required onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Bundles *</label>
+                        <input type="number" class="form-control item-bundles" required onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Loss</label>
+                        <input type="number" class="form-control item-loss" value="0" min="0" onchange="calculateTotal(this)">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Total</label>
+                        <input type="text" class="form-control item-total" readonly title="Boxes × Bundles + Loss">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeItem(this)">Remove</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', itemHtml);
+}
+
+function calculateTotal(input) {
+    const card = input.closest('.item-card');
+    const boxes = parseInt(card.querySelector('.item-boxes').value) || 0;
+    const bundles = parseInt(card.querySelector('.item-bundles').value) || 0;
+    const loss = parseInt(card.querySelector('.item-loss').value) || 0;
+    const goodQty = boxes * bundles;
+    card.querySelector('.item-total').value = goodQty + loss;
+}
+
+function removeItem(btn) {
+    btn.closest('.item-card').remove();
+}
+
+document.getElementById('challanForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const items = [];
+    document.querySelectorAll('.item-card').forEach(card => {
+        const boxes = parseInt(card.querySelector('.item-boxes').value);
+        const bundles = parseInt(card.querySelector('.item-bundles').value);
+        const loss = parseInt(card.querySelector('.item-loss').value) || 0;
+        items.push({
+            description: card.querySelector('.item-description').value,
+            boxes: boxes,
+            bundles: bundles,
+            loss_quantity: loss,
+            quotation_item_id: card.querySelector('.item-quotation-item-id')?.value || null
+        });
+    });
+    
+    const formData = {
+        quotation_id: document.getElementById('quotation_id').value || null,
+        customer_id: document.getElementById('customer_id').value,
+        challan_date: document.getElementById('challan_date').value,
+        po_number: document.getElementById('po_number').value,
+        driver_name: document.getElementById('driver_name').value,
+        vehicle_no: document.getElementById('vehicle_no').value,
+        driver_contact: document.getElementById('driver_contact').value,
+        items: items
+    };
+    
+    try {
+        const response = await fetch('/challans/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('Challan created successfully!');
+            window.location.href = `/challans/${result.challan_id}/pdf`;
+        } else {
+            alert('Error: ' + (result.message || 'Failed to create challan'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+</script>
+{% endblock %}
