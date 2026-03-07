@@ -6,7 +6,6 @@ from flask import render_template, request, jsonify, send_file, redirect, url_fo
 from app import app, db
 import models  # Use models.Quotation etc. to avoid circular import
 from utils.pdf_generator import *
-from utils.fbr_integration import *
 from datetime import datetime, timedelta
 import os
 
@@ -595,23 +594,6 @@ def delete_invoice(invoice_id):
 
     flash('Invoice deleted successfully', 'success')
     return redirect(url_for('invoices'))
-
-@app.route('/invoices/<int:invoice_id>/fbr_submit', methods=['POST'])
-def submit_fbr_invoice(invoice_id):
-    """Submit invoice to FBR"""
-    invoice = models.Invoice.query.get_or_404(invoice_id)
-    result = submit_to_fbr(invoice)
-
-    if result['success']:
-        invoice.fbr_invoice_id = result.get('fbr_invoice_id')
-        invoice.qr_code_url = result.get('qr_code_url')
-        invoice.fbr_timestamp = datetime.utcnow()
-        invoice.digital_signature = result.get('digital_signature')
-        invoice.fbr_status = 'Verified'
-        db.session.commit()
-        generate_invoice_pdf(invoice)
-
-    return jsonify(result)
 
 @app.route('/api/challans/uninvoiced')
 def get_uninvoiced_challans():

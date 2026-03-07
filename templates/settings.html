@@ -42,37 +42,8 @@
                             <label class="form-label">Company NTN</label>
                             <input type="text" class="form-control" name="company_ntn" value="{{ settings.company_ntn or '' }}">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Company Email (FBR)</label>
-                            <input type="email" class="form-control" name="company_email" value="{{ settings.company_email|default('', true) }}">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Business Type (FBR)</label>
-                        <select class="form-select" name="business_type">
-                            <option value="Manufacturer" {{ 'selected' if (settings.business_type|default('', true) or '') == 'Manufacturer' else '' }}>Manufacturer</option>
-                            <option value="Wholesaler" {{ 'selected' if (settings.business_type|default('', true) or '') == 'Wholesaler' else '' }}>Wholesaler</option>
-                            <option value="Retailer" {{ 'selected' if (settings.business_type|default('', true) or '') == 'Retailer' else '' }}>Retailer</option>
-                        </select>
                     </div>
                     
-                    <hr>
-                    <h6 class="mt-3">FBR Digital Invoicing Configuration</h6>
-                    <div class="alert alert-info">
-                        <small>Configure your unique FBR credentials (POS ID & Auth Token) here. Each user/company needs their own.</small>
-                    </div>
-                    <div class="row mb-3">
-                         <div class="col-md-6">
-                            <label class="form-label">POS ID</label>
-                            <input type="text" class="form-control" name="fbr_pos_id" value="{{ settings.fbr_pos_id or '' }}" placeholder="Enter POS ID">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Auth Token</label>
-                            <input type="text" class="form-control" name="fbr_auth_token" value="{{ settings.fbr_auth_token or '' }}" placeholder="Enter Bearer Token">
-                        </div>
-                    </div>
-
-                    <hr>
                     <h6 class="mt-3">Default Terms & Conditions</h6>
                     <div class="row mb-3">
                         <div class="col-md-4">
