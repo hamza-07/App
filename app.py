@@ -14,14 +14,17 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///hamza_enterprises.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:////tmp/hamza_enterprises.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['PDF_FOLDER'] = 'generated_pdfs'
 
-# Create necessary directories
+# Create necessary directories (skip on read-only filesystems like Vercel)
 for folder in [app.config['UPLOAD_FOLDER'], app.config['PDF_FOLDER'], 'static/images']:
-    os.makedirs(folder, exist_ok=True)
+    try:
+        os.makedirs(folder, exist_ok=True)
+    except OSError:
+        pass
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
